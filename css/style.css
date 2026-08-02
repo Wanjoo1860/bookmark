@@ -334,16 +334,33 @@ html, body {
 /* ─── 관리자 전용 (사이드바에서만 적용) ─── */
 body:not(.is-admin) .sec-admin { display: none; }
 
-/* ─── 반응형 ─── */
+/* ─── 반응형 (모바일) ─── */
 @media (max-width: 768px) {
-  .sidebar { width: var(--sidebar-collapsed); }
-  .sidebar .sidebar-title { display: none; }
-  .sidebar .nav-item { justify-content: center; padding: 10px 0; margin: 2px 4px; }
-  .sidebar .nav-icon { margin: 0; }
-  .sidebar .nav-name { display: none; }
-  .sidebar .adm-badge { display: none; }
-  .sidebar .blocked-tag { display: none; }
-  .sidebar .footer-user { display: none; }
+  .sidebar {
+    width: var(--sidebar-collapsed);
+    z-index: 200;
+  }
+
+  .sidebar.expanded {
+    width: var(--sidebar-width);
+    position: fixed;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+
+  .sidebar:not(.expanded) .sidebar-title { display: none; }
+  .sidebar:not(.expanded) .nav-section-label { font-size: 0; text-align: center; padding: 10px 0 6px; }   /* ← 추가 */
+  .sidebar:not(.expanded) .nav-section-label::before { margin-right: 0; }                                   /* ← 추가 */
+  .sidebar:not(.expanded) .nav-item { justify-content: center; padding: 10px 0; margin: 2px 4px; }
+  .sidebar:not(.expanded) .nav-icon { margin: 0; }
+  .sidebar:not(.expanded) .nav-name { display: none; }
+  .sidebar:not(.expanded) .adm-badge { display: none; }
+  .sidebar:not(.expanded) .blocked-tag { display: none; }
+  .sidebar:not(.expanded) .footer-user { display: none; }
+  .sidebar:not(.expanded) .footer-actions { flex-direction: column; }
+  .sidebar:not(.expanded) .sidebar-footer { flex-direction: column; align-items: center; padding: 8px 4px; gap: 6px; }
+  .sidebar:not(.expanded) .sidebar-header { justify-content: center; padding: 16px 0; }
+
   .main-content { left: var(--sidebar-collapsed); }
   .modal { max-width: 95vw; }
 }
+
