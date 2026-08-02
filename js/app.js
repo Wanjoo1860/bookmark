@@ -255,7 +255,26 @@ btnOpenNew.addEventListener('click', function(){
 });
 
 /* ─── 사이드바 토글 ─── */
-btnToggle.addEventListener('click', function(){ sidebar.classList.toggle('collapsed'); });
+const isMobile = () => window.innerWidth <= 768;
+
+btnToggle.addEventListener('click', function(){
+  if(isMobile()){
+    // 모바일: expanded 토글, collapsed는 항상 제거
+    sidebar.classList.remove('collapsed');
+    sidebar.classList.toggle('expanded');
+  } else {
+    // PC: collapsed 토글, expanded는 항상 제거
+    sidebar.classList.remove('expanded');
+    sidebar.classList.toggle('collapsed');
+  }
+});
+
+navList.addEventListener('click', function(){
+  if(isMobile() && sidebar.classList.contains('expanded')){
+    sidebar.classList.remove('expanded');
+  }
+});
+
 
 /* ─── 사이드바 가시성 ─── */
 function visible(bm){
