@@ -1,15 +1,14 @@
 // ============================================================
 // 즐겨찾기 포털 — SharePoint + Graph API 버전
-// GitHub 에러 화면 방식 적용 (openPage 내부에서 차단 판단)
 // ============================================================
 ;(function(){
 'use strict';
 
-/* ─── 설정 (config.js에서 가져옴) ─── */
-var CONFIG = window.PORTAL_CONFIG || {};
+/* ─── 설정 ─── */
+var CONFIG = window.PORTAL_CONFIG || window.CONFIG || {};
 
-var KNOWN_BLOCKED = CONFIG.KNOWN_BLOCKED || [
-  'google.com','google.co.kr','youtube.com','github.com','naver.com','daum.net','kakao.com',
+var KNOWN_BLOCKED = window.KNOWN_BLOCKED || [
+  'google.com','youtube.com','github.com','naver.com','daum.net','kakao.com',
   'mail.google.com','chat.openai.com','claude.ai','facebook.com','instagram.com',
   'twitter.com','x.com','linkedin.com','reddit.com','netflix.com','amazon.com',
   'apple.com','microsoft.com','notion.so','figma.com','slack.com','discord.com',
@@ -24,9 +23,9 @@ window.APP = window.APP || {};
 var APP = window.APP;
 APP.bookmarks = APP.bookmarks || [];
 APP.dynamicBlocked = APP.dynamicBlocked || [];
-APP.currentUrl = '';
-APP.currentUserEmail = '';
-APP.pageCallId = 0;
+APP.currentUrl = APP.currentUrl || '';
+APP.currentUserEmail = APP.currentUserEmail || '';
+APP.pageCallId = APP.pageCallId || 0;
 
 var checkTimer = null;
 var loadTimer  = null;
@@ -183,14 +182,12 @@ function openPage(url){
   if(!url.startsWith('http')) url = 'https://' + url;
   APP.currentUrl = url;
 
-  // ─── 차단된 URL → 에러 화면 표시 ───
   if(isBlocked(url)){
     contentFrame.src = 'about:blank';
     showError(url);
     return;
   }
 
-  // ─── 비차단 URL → iframe 로드 시도 ───
   showLoading();
   var start = Date.now();
   var loaded = false;
@@ -201,7 +198,6 @@ function openPage(url){
     loaded = true;
     var elapsed = Date.now() - start;
 
-    // 빠른 로드 (< 200ms) → X-Frame-Options 차단 의심
     if(elapsed < 200){
       checkTimer = setTimeout(function(){
         if(myId !== APP.pageCallId) return;
@@ -214,14 +210,12 @@ function openPage(url){
             showFrame();
           }
         } catch(e){
-          // cross-origin → 정상 로드로 간주
           showFrame();
         }
       }, 300);
       return;
     }
 
-    // 일반 로드 완료
     try {
       var loc = contentFrame.contentWindow.location.href;
       if(loc === 'about:blank'){
@@ -229,7 +223,7 @@ function openPage(url){
         showError(url);
         return;
       }
-    } catch(e){ /* cross-origin: 정상 */ }
+    } catch(e){ /* cross-origin: OK */ }
     showFrame();
   };
 
@@ -240,7 +234,6 @@ function openPage(url){
     showError(url);
   };
 
-  // 타임아웃 12초
   loadTimer = setTimeout(function(){
     if(myId !== APP.pageCallId) return;
     clearChecks();
@@ -343,7 +336,6 @@ function renderNav(){
       span.textContent = name;
       item.appendChild(span);
 
-      // 차단 태그
       if(isBlocked(url)){
         var tag = document.createElement('span');
         tag.className = 'blocked-tag';
@@ -351,7 +343,6 @@ function renderNav(){
         item.appendChild(tag);
       }
 
-      // 관리자 배지
       if(sec.key === 'admin'){
         var badge = document.createElement('span');
         badge.className = 'adm-badge';
@@ -359,17 +350,13 @@ function renderNav(){
         item.appendChild(badge);
       }
 
-      // ★ 클릭 — 항상 openPage 호출 (GitHub 방식)
       item.addEventListener('click', function(){
-        // active 처리
         var prev = navList.querySelector('.nav-item.active');
         if(prev) prev.classList.remove('active');
         item.classList.add('active');
-        // openPage 호출 (내부에서 차단 여부 판단)
         openPage(url);
       });
 
-      // 호버 카드
       item.addEventListener('mouseenter', function(){
         hoverTimer = setTimeout(function(){ showHoverCard(item, bm); }, 400);
       });
@@ -385,16 +372,15 @@ function renderNav(){
   });
 }
 
-/* ─── 데이터 로드 (SharePoint Graph API) ─── */
+/* ─── 데이터 로드 ★★★ bookmarkGetAll() 사용 ★★★ ─── */
 function loadBookmarks(){
-  if(typeof graphGet !== 'function'){
-    console.error('[app.js] graphGet 함수를 찾을 수 없습니다. graph.js가 로드되었는지 확인하세요.');
+  if(typeof bookmarkGetAll !== 'function'){
+    console.error('[app.js] bookmarkGetAll 함수를 찾을 수 없습니다. graph.js가 로드되었는지 확인하세요.');
     return;
   }
-  graphGet().then(function(items){
+  bookmarkGetAll().then(function(items){
     APP.bookmarks = items || [];
     renderNav();
-    // 현재 열린 페이지가 없을 때만 환영 화면 표시
     if(!APP.currentUrl){
       showWelcome();
     }
@@ -404,7 +390,7 @@ function loadBookmarks(){
   });
 }
 
-/* ─── 북마크 추가 ─── */
+/* ─── 북마크 추가 ★★★ bookmarkCreate() 사용 ★★★ ─── */
 function addBookmark(){
   var url  = (inputUrl.value || '').trim();
   var name = (inputName.value || '').trim();
@@ -413,7 +399,6 @@ function addBookmark(){
 
   if(!url){ toast('URL을 입력하세요'); return; }
   if(!name) name = getHostname(url) || url;
-
   if(!url.startsWith('http')) url = 'https://' + url;
 
   var maxOrder = 0;
@@ -428,9 +413,7 @@ function addBookmark(){
   if(APP.currentUserEmail) fields.Owner = APP.currentUserEmail;
   fields.SortOrder = maxOrder + 1;
 
-  console.log('[addBookmark] 전송 fields:', JSON.stringify(fields));
-
-  graphPost(fields).then(function(result){
+  bookmarkCreate(fields).then(function(result){
     toast('추가 완료: ' + name);
     inputUrl.value = ''; inputName.value = ''; inputDesc.value = '';
     if(previewFav) previewFav.style.display = 'none';
@@ -439,22 +422,21 @@ function addBookmark(){
   }).catch(function(err){
     console.error('[addBookmark] 실패:', err);
     // 최소 필드로 재시도
-    console.log('[addBookmark] 최소 필드로 재시도...');
-    graphPost({ Title: name, URL: url }).then(function(){
+    bookmarkCreate({ Title: name, URL: url }).then(function(){
       toast('추가 완료 (최소): ' + name);
       inputUrl.value = ''; inputName.value = ''; inputDesc.value = '';
       loadBookmarks();
     }).catch(function(err2){
       toast('추가 실패: ' + (err2.message || err2));
-      console.error('[addBookmark] 최소 필드 재시도도 실패:', err2);
+      console.error('[addBookmark] 재시도도 실패:', err2);
     });
   });
 }
 
-/* ─── 북마크 삭제 ─── */
+/* ─── 북마크 삭제 ★★★ bookmarkDeleteItem() 사용 ★★★ ─── */
 function deleteBookmark(id, name){
   if(!confirm('"' + name + '" 을(를) 삭제하시겠습니까?')) return;
-  graphDelete(id).then(function(){
+  bookmarkDeleteItem(id).then(function(){
     toast('삭제 완료: ' + name);
     loadBookmarks();
   }).catch(function(err){
@@ -484,6 +466,7 @@ function closeEditModal(){
   editingId = null;
 }
 
+/* ─── 편집 저장 ★★★ bookmarkUpdate() 사용 ★★★ ─── */
 function saveEdit(){
   if(!editingId) return;
   var url  = (editUrl.value || '').trim();
@@ -498,7 +481,7 @@ function saveEdit(){
   var fields = { Title: name, URL: url, Description: desc };
   if(vis) fields.Visibility = vis;
 
-  graphPatch(editingId, fields).then(function(){
+  bookmarkUpdate(editingId, fields).then(function(){
     toast('수정 완료: ' + name);
     closeEditModal();
     loadBookmarks();
@@ -550,13 +533,11 @@ function renderBmSections(){
 
         var row = document.createElement('div');
         row.className = 'bm-row';
-
         row.innerHTML =
           '<img class="bm-favicon" src="' + (faviconUrl(url,22)||fallbackIcon(name)) + '" alt="">' +
           '<div class="bm-info-wrap"><span class="bm-info">' + name + '</span>' +
           '<span class="bm-sub">' + (getHostname(url)||url) + '</span></div>';
 
-        // 편집 버튼
         var btnEdit = document.createElement('button');
         btnEdit.className = 'bm-btn';
         btnEdit.title = '편집';
@@ -564,7 +545,6 @@ function renderBmSections(){
         btnEdit.addEventListener('click', function(){ openEditModal(bm); });
         row.appendChild(btnEdit);
 
-        // 삭제 버튼
         var btnDel = document.createElement('button');
         btnDel.className = 'bm-btn bm-del';
         btnDel.title = '삭제';
@@ -641,7 +621,7 @@ btnSaveEdit.addEventListener('click', saveEdit);
 
 /* ─── 로그아웃 ─── */
 btnLogout.addEventListener('click', function(){
-  if(typeof msalLogout === 'function') msalLogout();
+  if(typeof logout === 'function') logout();
   else window.location.reload();
 });
 
@@ -655,25 +635,21 @@ document.addEventListener('keydown', function(e){
 
 /* ─── 초기화 ─── */
 function initApp(){
-  // 사용자 정보 표시
   if(APP.currentUserEmail && footerUser){
     footerUser.textContent = APP.currentUserEmail;
   }
-  // 북마크 로드
   loadBookmarks();
 }
 
-// auth.js에서 로그인 완료 후 initApp()을 호출하도록 설정
-// 또는 MSAL 인증 성공 콜백에서 호출
+// ★★★ 전역 노출 — auth.js에서 호출 가능하도록 ★★★
 window.initApp = initApp;
+window.loadBookmarks = loadBookmarks;
+window.renderNav = renderNav;
 
-// auth.js가 없는 경우 바로 실행 (개발/테스트용)
-if(typeof msalLogin === 'undefined'){
-  console.log('[app.js] auth.js 없음 — 바로 initApp 호출');
+// auth.js가 없는 경우 (개발/테스트용)
+if(typeof msal === 'undefined' && typeof msalLogin === 'undefined'){
+  console.log('[app.js] MSAL 없음 — 바로 initApp 호출');
   initApp();
 }
-
-window.loadBookmarks = loadBookmarks;
-
 
 })();
