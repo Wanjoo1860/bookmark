@@ -33,29 +33,6 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
-/* ─── 로그인 ─── */
-.login-wrap {
-  display: flex; align-items: center; justify-content: center;
-  position: fixed; inset: 0; background: var(--bg-body); z-index: 9999;
-}
-.login-box {
-  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 40px 32px; width: 320px; display: flex; flex-direction: column; gap: 16px;
-}
-.login-title { text-align: center; font-size: 20px; color: var(--text-primary); margin-bottom: 8px; }
-.login-box input {
-  background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px;
-  padding: 10px 14px; color: var(--text-primary); font-size: 14px; outline: none;
-  transition: border-color 0.2s;
-}
-.login-box input:focus { border-color: var(--accent); }
-.btn-login {
-  background: var(--accent); color: #fff; border: none; border-radius: 8px;
-  padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
-}
-.btn-login:hover { opacity: 0.85; }
-.login-error { color: var(--danger); font-size: 12px; text-align: center; min-height: 18px; }
-
 /* ─── 사이드바 ─── */
 .sidebar {
   position: fixed; top: 0; left: 0; bottom: 0;
@@ -144,19 +121,23 @@ html, body {
 }
 .sidebar.collapsed ~ .main-content { left: var(--sidebar-collapsed); }
 
-/* ─── 화면 ─── */
+/* ─── 화면 (공통) ─── */
 .screen {
   display: none; flex-direction: column; align-items: center; justify-content: center;
   height: 100%; gap: 12px; color: var(--text-secondary);
 }
 .welcome-screen h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .welcome-screen p { font-size: 13px; color: var(--text-muted); }
+
+/* ─── 로딩 화면 ─── */
 .loading-spinner {
   width: 36px; height: 36px; border: 3px solid var(--border);
   border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-screen p { font-size: 13px; color: var(--text-muted); }
+
+/* ─── 에러 화면 ─── */
 .error-screen { gap: 16px; }
 .error-title { font-size: 20px; font-weight: 600; color: var(--danger); }
 .error-domain { font-size: 14px; color: var(--text-secondary); }
@@ -205,7 +186,7 @@ html, body {
 
 .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
 
-/* ─── 추가 폼 (줄간격 통일) ─── */
+/* ─── 추가 폼 ─── */
 .add-form { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .form-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; }
 .add-row {
@@ -331,7 +312,7 @@ html, body {
 }
 .toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ─── 관리자 전용 (사이드바에서만 적용) ─── */
+/* ─── 관리자 전용 ─── */
 body:not(.is-admin) .sec-admin { display: none; }
 
 /* ─── 반응형 (모바일) ─── */
@@ -340,16 +321,14 @@ body:not(.is-admin) .sec-admin { display: none; }
     width: var(--sidebar-collapsed);
     z-index: 200;
   }
-
   .sidebar.expanded {
     width: var(--sidebar-width);
     position: fixed;
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
   }
-
   .sidebar:not(.expanded) .sidebar-title { display: none; }
-  .sidebar:not(.expanded) .nav-section-label { font-size: 0; text-align: center; padding: 10px 0 6px; }   /* ← 추가 */
-  .sidebar:not(.expanded) .nav-section-label::before { margin-right: 0; }                                   /* ← 추가 */
+  .sidebar:not(.expanded) .nav-section-label { font-size: 0; text-align: center; padding: 10px 0 6px; }
+  .sidebar:not(.expanded) .nav-section-label::before { margin-right: 0; }
   .sidebar:not(.expanded) .nav-item { justify-content: center; padding: 10px 0; margin: 2px 4px; }
   .sidebar:not(.expanded) .nav-icon { margin: 0; }
   .sidebar:not(.expanded) .nav-name { display: none; }
@@ -359,8 +338,6 @@ body:not(.is-admin) .sec-admin { display: none; }
   .sidebar:not(.expanded) .footer-actions { flex-direction: column; }
   .sidebar:not(.expanded) .sidebar-footer { flex-direction: column; align-items: center; padding: 8px 4px; gap: 6px; }
   .sidebar:not(.expanded) .sidebar-header { justify-content: center; padding: 16px 0; }
-
   .main-content { left: var(--sidebar-collapsed); }
   .modal { max-width: 95vw; }
 }
-
