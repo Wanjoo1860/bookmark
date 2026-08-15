@@ -11,17 +11,6 @@
 </head>
 <body>
 
-  <!-- ─── 로그인 ─── -->
-  <div id="loginWrap" class="login-wrap">
-    <form id="loginForm" class="login-box">
-      <h2 class="login-title">즐겨찾기 포털</h2>
-      <input type="text" id="loginId" placeholder="아이디" autocomplete="username" required>
-      <input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password" required>
-      <button type="submit" class="btn-login">로그인</button>
-      <p id="loginError" class="login-error"></p>
-    </form>
-  </div>
-
   <!-- ─── 사이드바 ─── -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
@@ -131,7 +120,7 @@
         <div id="bmSections"></div>
       </div>
 
-      <!-- 사용자 관리 탭 -->
+      <!-- 사용자 관리 탭 (SharePoint에서는 Azure AD 사용 시 숨길 수 있음) -->
       <div class="modal-body" id="panelUsers" style="display:none">
         <div class="add-form">
           <h4 class="form-title" id="userFormTitle">사용자 추가</h4>
@@ -209,6 +198,10 @@
   <!-- ─── 토스트 ─── -->
   <div id="toastMsg" class="toast-msg"></div>
 
+  <!-- ─── Scripts (SharePoint 버전) ─── -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/graph.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
