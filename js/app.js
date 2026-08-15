@@ -394,7 +394,10 @@ function loadBookmarks(){
   graphGet().then(function(items){
     APP.bookmarks = items || [];
     renderNav();
-    showWelcome();
+    // 현재 열린 페이지가 없을 때만 환영 화면 표시
+    if(!APP.currentUrl){
+      showWelcome();
+    }
   }).catch(function(err){
     console.error('[loadBookmarks] 실패:', err);
     toast('북마크 로드 실패');
@@ -669,5 +672,8 @@ if(typeof msalLogin === 'undefined'){
   console.log('[app.js] auth.js 없음 — 바로 initApp 호출');
   initApp();
 }
+
+window.loadBookmarks = loadBookmarks;
+
 
 })();
