@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>즐겨찾기 포털</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
 </head>
 <body>
 
@@ -16,7 +19,6 @@
       <input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password" required>
       <button type="submit" class="btn-login">로그인</button>
       <p id="loginError" class="login-error"></p>
-      <p class="login-help">기본 계정: admin / admin123, user1 / user123</p>
     </form>
   </div>
 
@@ -80,8 +82,7 @@
       </button>
     </div>
 
-    <!-- sandbox 속성 제거됨 -->
-    <iframe id="contentFrame" class="content-frame"></iframe>
+    <iframe id="contentFrame" class="content-frame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox"></iframe>
   </main>
 
   <!-- ─── 관리 모달 ─── -->

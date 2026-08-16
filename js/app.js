@@ -28,6 +28,7 @@ let currentUser    = null;
 let currentUrl     = '';
 let bookmarks      = [];
 let dynamicBlocked = [];
+let checkTimer     = null;
 let loadTimer      = null;
 let pageCallId     = 0;
 let hoverTimer     = null;
@@ -178,14 +179,15 @@ function showError(url){ hideAll(); errorDomain.textContent = getHostname(url) |
 function showLoading(){ hideAll(); loadingScreen.style.display = 'flex'; }
 function showFrame(){ hideAll(); contentFrame.style.display = 'block'; }
 
-/* ─── 타이머 정리 ─── */
+/* ─── iframe 체크 정리 ─── */
 function clearChecks(){
+  if(checkTimer){ clearTimeout(checkTimer); checkTimer = null; }
   if(loadTimer){ clearTimeout(loadTimer); loadTimer = null; }
   contentFrame.onload  = null;
   contentFrame.onerror = null;
 }
 
-/* ─── 페이지 열기 (단순화된 버전) ─── */
+/* ─── 페이지 열기 ─── */
 function openPage(url){
   clearChecks();
   pageCallId++;
@@ -194,40 +196,58 @@ function openPage(url){
   if(!url.startsWith('http')) url = 'https://' + url;
   currentUrl = url;
 
-  // 확실히 차단된 사이트만 사전 차단
   if(isBlocked(url)){
     contentFrame.src = 'about:blank';
     showError(url);
     return;
   }
 
-  // 로딩 표시 후 iframe에 로드
   showLoading();
-  contentFrame.src = url;
+  const startTime = Date.now();
 
   contentFrame.onload = function(){
     if(myId !== pageCallId) return;
     clearChecks();
-    showFrame();
+    const elapsed = Date.now() - startTime;
+    try {
+      const loc = contentFrame.contentWindow.location.href;
+      if(loc === 'about:blank'){ addToDynamicBlocked(url); showError(url); return; }
+    } catch(e){}
+    if(elapsed < 200){
+      checkTimer = setTimeout(function(){
+        if(myId !== pageCallId) return;
+        try {
+          const loc = contentFrame.contentWindow.location.href;
+          if(loc === 'about:blank'){ addToDynamicBlocked(url); showError(url); return; }
+        } catch(e){}
+        showFrame();
+      }, 300);
+    } else {
+      showFrame();
+    }
   };
 
   contentFrame.onerror = function(){
     if(myId !== pageCallId) return;
-    clearChecks();
-    addToDynamicBlocked(url);
-    showError(url);
+    clearChecks(); addToDynamicBlocked(url); showError(url);
   };
 
-  // 타임아웃: 15초 후에도 로드 안 되면 차단으로 판단
   loadTimer = setTimeout(function(){
     if(myId !== pageCallId) return;
-    // 이미 프레임이 보이면 무시
-    if(contentFrame.style.display === 'block') return;
-    clearChecks();
-    addToDynamicBlocked(url);
-    showError(url);
-  }, 15000);
+    clearChecks(); addToDynamicBlocked(url); showError(url);
+  }, 12000);
+
+  contentFrame.src = url;
 }
+
+/* ─── CSP violation ─── */
+document.addEventListener('securitypolicyviolation', function(e){
+  if(e.blockedURI && currentUrl){
+    const bh = getHostname(e.blockedURI);
+    const ch = getHostname(currentUrl);
+    if(bh === ch){ clearChecks(); addToDynamicBlocked(currentUrl); showError(currentUrl); }
+  }
+});
 
 /* ─── 새 창 열기 ─── */
 btnOpenNew.addEventListener('click', function(){
@@ -235,7 +255,26 @@ btnOpenNew.addEventListener('click', function(){
 });
 
 /* ─── 사이드바 토글 ─── */
-btnToggle.addEventListener('click', function(){ sidebar.classList.toggle('collapsed'); });
+const isMobile = () => window.innerWidth <= 768;
+
+btnToggle.addEventListener('click', function(){
+  if(isMobile()){
+    // 모바일: expanded 토글, collapsed는 항상 제거
+    sidebar.classList.remove('collapsed');
+    sidebar.classList.toggle('expanded');
+  } else {
+    // PC: collapsed 토글, expanded는 항상 제거
+    sidebar.classList.remove('expanded');
+    sidebar.classList.toggle('collapsed');
+  }
+});
+
+navList.addEventListener('click', function(){
+  if(isMobile() && sidebar.classList.contains('expanded')){
+    sidebar.classList.remove('expanded');
+  }
+});
+
 
 /* ─── 사이드바 가시성 ─── */
 function visible(bm){
@@ -656,17 +695,20 @@ document.querySelectorAll('.modal-tab').forEach(tab => {
 
 /* ─── 관리 모달 열기/닫기 ─── */
 btnManager.addEventListener('click', function(){
+  // 탭 초기화 (즐겨찾기 탭 활성)
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.modal-tab[data-tab="bookmarks"]').classList.add('active');
   panelBookmarks.style.display = '';
   panelUsers.style.display = 'none';
 
+  // 사용자 관리 탭: 관리자만 표시
   if(currentUser.role === 'admin'){
     tabUsers.style.display = '';
   } else {
     tabUsers.style.display = 'none';
   }
 
+  // 일반 사용자: 공개 범위 select만 숨김, 추가 버튼은 유지
   if(currentUser.role === 'admin'){
     inputVis.style.display = '';
   } else {
@@ -763,6 +805,7 @@ function renderUserList(){
       users = users.filter(u => u.id !== uid);
       saveUsers(users);
 
+      // 해당 사용자의 개인 북마크 삭제
       bookmarks = bookmarks.filter(b => !(b.owner === uid && b.vis === 'private'));
       bookmarks.forEach((b, i) => b.ord = i);
       saveJSON(ST_BM, bookmarks);
