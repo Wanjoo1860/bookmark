@@ -134,6 +134,31 @@ function addToDynamicBlocked(url){
   }
 }
 
+/* ─── ★ 사이트명 추출 ─── */
+function extractSiteName(hostname){
+  var h = hostname.replace(/^www\./, '');
+
+  var multiTlds = [
+    'co.kr','co.jp','co.uk','com.au','com.br','com.cn',
+    'ne.kr','or.kr','ac.kr','go.kr','pe.kr',
+    'org.uk','net.au','org.au','co.in','com.tw'
+  ];
+
+  var parts = h.split('.');
+  var siteName = '';
+
+  var lastTwo = parts.slice(-2).join('.');
+  if(multiTlds.includes(lastTwo) && parts.length >= 3){
+    siteName = parts[parts.length - 3];
+  } else if(parts.length >= 2){
+    siteName = parts[parts.length - 2];
+  } else {
+    siteName = parts[0];
+  }
+
+  return siteName.charAt(0).toUpperCase() + siteName.slice(1);
+}
+
 function faviconUrl(url, sz){
   const h = getHostname(url);
   return h ? `https://www.google.com/s2/favicons?domain=${h}&sz=${sz||64}` : '';
@@ -259,11 +284,9 @@ const isMobile = () => window.innerWidth <= 768;
 
 btnToggle.addEventListener('click', function(){
   if(isMobile()){
-    // 모바일: expanded 토글, collapsed는 항상 제거
     sidebar.classList.remove('collapsed');
     sidebar.classList.toggle('expanded');
   } else {
-    // PC: collapsed 토글, expanded는 항상 제거
     sidebar.classList.remove('expanded');
     sidebar.classList.toggle('collapsed');
   }
@@ -274,7 +297,6 @@ navList.addEventListener('click', function(){
     sidebar.classList.remove('expanded');
   }
 });
-
 
 /* ─── 사이드바 가시성 ─── */
 function visible(bm){
@@ -393,7 +415,7 @@ function renderNav(){
 }
 
 /* ==========================================================
-   편집 모달
+   편집 모달 (★ 수정: 저장 버튼 항상 표시)
    ========================================================== */
 function openEditModal(bm){
   editingId = bm.id;
@@ -405,14 +427,12 @@ function openEditModal(bm){
   editFav.style.display = 'inline-block';
   editFav.onerror = function(){ this.style.display='none'; };
 
-  // ──── 수정된 부분 ────
   if(currentUser.role === 'admin'){
-    editVis.style.display = '';       // select만 표시
+    editVis.style.display = '';
   } else {
-    editVis.style.display = 'none';   // select만 숨김
+    editVis.style.display = 'none';
   }
-  editVisRow.style.display = 'flex';  // 행은 항상 표시 (저장 버튼 포함)
-  // ──── 수정 끝 ────
+  editVisRow.style.display = 'flex';
 
   editOverlay.classList.add('show');
 }
@@ -616,7 +636,9 @@ function reorderInSection(dragId, targetId, vis, ownerOnly){
   renderNav();
 }
 
-/* ─── URL 입력 ─── */
+/* ─── URL 입력 (★ 디바운스 + 유효 도메인 체크) ─── */
+let urlDebounce = null;
+
 function onUrlInput(){
   const url = inputUrl.value.trim();
   if(!url){
@@ -637,12 +659,32 @@ function onUrlInput(){
     inputHint.style.color = '';
   }
 
-  if(!inputName.value.trim()){
-    const h = getHostname(full);
-    if(h) inputName.value = h.replace(/^www\./,'');
-  }
+  // ★ 디바운스: 500ms 후 Name 자동완성 (타이핑 중 조기 확정 방지)
+  clearTimeout(urlDebounce);
+  urlDebounce = setTimeout(function(){
+    if(!inputName.value.trim()){
+      const h = getHostname(full);
+      if(h && h.includes('.')){
+        inputName.value = extractSiteName(h);
+      }
+    }
+  }, 500);
 }
+
 inputUrl.addEventListener('input', onUrlInput);
+inputUrl.addEventListener('paste', function(){
+  setTimeout(function(){
+    const url = inputUrl.value.trim();
+    if(!url) return;
+    const full = url.startsWith('http') ? url : 'https://'+url;
+    if(!inputName.value.trim()){
+      const h = getHostname(full);
+      if(h && h.includes('.')){
+        inputName.value = extractSiteName(h);
+      }
+    }
+  }, 0);
+});
 
 /* ─── 북마크 추가 ─── */
 btnAddBm.addEventListener('click', function(){
@@ -698,20 +740,17 @@ document.querySelectorAll('.modal-tab').forEach(tab => {
 
 /* ─── 관리 모달 열기/닫기 ─── */
 btnManager.addEventListener('click', function(){
-  // 탭 초기화 (즐겨찾기 탭 활성)
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.modal-tab[data-tab="bookmarks"]').classList.add('active');
   panelBookmarks.style.display = '';
   panelUsers.style.display = 'none';
 
-  // 사용자 관리 탭: 관리자만 표시
   if(currentUser.role === 'admin'){
     tabUsers.style.display = '';
   } else {
     tabUsers.style.display = 'none';
   }
 
-  // 일반 사용자: 공개 범위 select만 숨김, 추가 버튼은 유지
   if(currentUser.role === 'admin'){
     inputVis.style.display = '';
   } else {
@@ -778,7 +817,6 @@ function renderUserList(){
     userList.appendChild(item);
   });
 
-  // 역할 변경 이벤트
   userList.querySelectorAll('.btn-user-role').forEach(btn => {
     btn.addEventListener('click', function(){
       const uid = btn.dataset.uid;
@@ -798,7 +836,6 @@ function renderUserList(){
     });
   });
 
-  // 삭제 이벤트
   userList.querySelectorAll('.btn-user-del').forEach(btn => {
     btn.addEventListener('click', function(){
       const uid = btn.dataset.uid;
@@ -808,7 +845,6 @@ function renderUserList(){
       users = users.filter(u => u.id !== uid);
       saveUsers(users);
 
-      // 해당 사용자의 개인 북마크 삭제
       bookmarks = bookmarks.filter(b => !(b.owner === uid && b.vis === 'private'));
       bookmarks.forEach((b, i) => b.ord = i);
       saveJSON(ST_BM, bookmarks);
@@ -820,7 +856,6 @@ function renderUserList(){
   });
 }
 
-// 사용자 추가
 btnAddUser.addEventListener('click', function(){
   const id = userInputId.value.trim();
   const pw = userInputPw.value.trim();
