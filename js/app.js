@@ -405,11 +405,14 @@ function openEditModal(bm){
   editFav.style.display = 'inline-block';
   editFav.onerror = function(){ this.style.display='none'; };
 
+  // ──── 수정된 부분 ────
   if(currentUser.role === 'admin'){
-    editVisRow.style.display = 'flex';
+    editVis.style.display = '';       // select만 표시
   } else {
-    editVisRow.style.display = 'none';
+    editVis.style.display = 'none';   // select만 숨김
   }
+  editVisRow.style.display = 'flex';  // 행은 항상 표시 (저장 버튼 포함)
+  // ──── 수정 끝 ────
 
   editOverlay.classList.add('show');
 }
